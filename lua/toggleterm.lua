@@ -203,7 +203,8 @@ end
 --- @param selection_type string
 --- @param trim_spaces boolean
 --- @param cmd_data table<string, any>
-function M.send_lines_to_terminal(selection_type, trim_spaces, cmd_data)
+--- @param move boolean
+function M.send_lines_to_terminal(selection_type, trim_spaces, cmd_data, move)
   local id = tonumber(cmd_data.args) or 1
   trim_spaces = trim_spaces == nil or trim_spaces
 
@@ -218,6 +219,7 @@ function M.send_lines_to_terminal(selection_type, trim_spaces, cmd_data)
   local lines = {}
   -- Beginning of the selection: line number, column number
   local start_line, start_col
+  local end_line, end_col
   if selection_type == "single_line" then
     start_line, start_col = unpack(api.nvim_win_get_cursor(0))
     table.insert(lines, fn.getline(start_line))
@@ -229,6 +231,7 @@ function M.send_lines_to_terminal(selection_type, trim_spaces, cmd_data)
       res = utils.get_line_selection("motion")
     end
     start_line, start_col = unpack(res.start_pos)
+    end_line, end_col = unpack(res.end_pos)
     -- char, line and block are used for motion/operatorfunc. 'block' is ignored
     if selection_type == "visual_lines" or selection_type == "line" then
       lines = res.selected_lines
@@ -250,7 +253,13 @@ function M.send_lines_to_terminal(selection_type, trim_spaces, cmd_data)
 
   -- Jump back with the cursor where we were at the beginning of the selection
   api.nvim_set_current_win(current_window)
-  api.nvim_win_set_cursor(current_window, { start_line, start_col })
+  if not move then
+      api.nvim_win_set_cursor(current_window, { start_line, start_col })
+    else
+      api.nvim_win_set_cursor(current_window, { end_line+1, 0 })
+      vim.cmd("stopinsert")
+
+  end
 end
 
 function M.toggle_command(args, count)
